@@ -1,4 +1,4 @@
-# 📌 Instance Segmentation 정리 (Markdown 버전)
+# 📌 Instance Segmentation 정리
 
 ---
 
