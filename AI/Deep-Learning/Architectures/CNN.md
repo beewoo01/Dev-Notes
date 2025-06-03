@@ -8,7 +8,7 @@
 
 ## 1️⃣ Convolutional Layer (합성곱 계층)
 
-CNN의 핵심은 **합성곱(convolution)** 연산을 통해 **로컬 패턴(local patterns)**을 포착하는 것입니다.
+CNN의 핵심은 **합성곱(convolution)** 연산을 통해 **로컬 패턴(local patterns)** 을 포착하는 것입니다.
 
 - 입력 이미지에 대해 여러 개의 **필터(커널)**를 적용
 - 각 필터는 특정한 특징(예: 에지, 패턴 등)을 감지
