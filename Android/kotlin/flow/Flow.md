@@ -137,3 +137,82 @@ searchInput
 - `stateIn`, `shareIn`을 활용하면 `Cold Flow`도 상태처럼 공유 가능
 - 실시간 입력 처리나 UI 반응형 처리에는 `collectLatest`, `debounce`를 적극 활용
 
+---
+
+
+# Kotlin Flow 사용 목적과 활용 시점 정리
+
+
+## ✅ 왜 Flow를 사용하는가? (사용 이유 3가지)
+
+1. **비동기 스트림 처리**
+   - 데이터를 순차적 또는 지연된 방식으로 처리 가능
+   - 예: API 응답을 순서대로 처리, 지연된 계산 등
+
+2. **반응형 UI 구성**
+   - UI는 상태(state)에 반응해야 함
+   - `collectAsState()`를 통해 UI와 상태를 자연스럽게 연동 가능
+
+3. **연산자 기반 데이터 흐름 처리**
+   - `map`, `filter`, `combine`, `flatMapLatest` 등 다양한 연산자로 스트림 조작 가능
+   - RxJava의 대체제로 충분한 기능성 제공
+
+---
+
+## 🧊 Cold Flow: 언제 사용하는 것이 적합한가?
+
+| 상황 | 설명 |
+|------|------|
+| 매번 새로운 작업이 필요한 경우 | collect할 때마다 새로 시작되기 때문에, "수동 호출 → 새 작업" 구조에 적합 |
+| API 1 → API 2 → API 3 순차 호출 | 중간 계산 결과를 연결해 나가는 로직 구성에 유리 |
+| 일시적인 처리 흐름이 필요할 때 | 화면 진입 시 필요한 데이터만 흐르게 하고 싶을 때 |
+
+**예시**
+```kotlin
+fun loadUserInfo(): Flow<User> = flow {
+    val profile = api.fetchProfile()
+    val posts = api.fetchPosts(profile.id)
+    emit(User(profile, posts))
+}
+```
+
+## 🔥 Hot Flow: 언제 사용하는 것이 적합한가?
+
+| 상황                         | 설명 |
+|------------------------------|------|
+| 상태를 계속 유지해야 할 때  | `StateFlow`는 항상 최신 값을 보존하며 구독자에게 전달함 |
+| 이벤트 기반 시스템 구성     | `SharedFlow`는 이벤트(Toast, Navigation 등) 전달에 적합함 |
+| 여러 구독자가 동시에 데이터를 받아야 할 때 | `SharedFlow`, `stateIn`, `shareIn` 등을 통해 스트림을 공유 가능 |
+| ViewModel에서 Compose UI와 상태 연동 시 | UI 상태를 `StateFlow`로 유지하면 자연스럽게 구독하여 반응형 UI 구성 가능 |
+
+### ✅ 예시: StateFlow
+
+```kotlin
+val uiState = MutableStateFlow(LoginUiState())
+
+fun onEmailChanged(email: String) {
+    uiState.value = uiState.value.copy(email = email)
+}
+```
+
+### ✅ 예시: SharedFlow
+``` kotlin
+val toastEvent = MutableSharedFlow<String>()
+
+fun showToastMessage(msg: String) {
+    viewModelScope.launch {
+        toastEvent.emit(msg)
+    }
+}
+
+```
+
+## 🎯 결론 요약
+
+| Flow 종류     | 용도                       | 예시                                    |
+|---------------|----------------------------|------------------------------------------|
+| `Cold Flow`   | 요청마다 새 흐름이 필요할 때 | API 요청 시마다 새 데이터 필요할 경우     |
+| `StateFlow`   | 상태를 저장하고 UI에 반영해야 할 때 | 입력 폼 상태, 로딩 상태 유지 등         |
+| `SharedFlow`  | 일회성 이벤트 전파          | Toast 메시지, 화면 전환 트리거 등        |
+| `stateIn`     | Cold Flow → Hot 상태로 공유 | 여러 구독자에게 동일한 상태를 보여줄 때  |
+| `collectLatest` | 빠른 값 변경 중 마지막 것만 처리 | 검색창, 자동완성 등 입력 지연 처리에 적합 |
