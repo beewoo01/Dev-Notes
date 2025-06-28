@@ -1,0 +1,139 @@
+# 🔥 Kotlin Flow 완전정복: Cold Flow vs Hot Flow 차이와 활용법
+
+Kotlin Flow를 처음 접하면 `Cold Flow`와 `Hot Flow`의 차이가 가장 큰 헷갈림 중 하나다. 이번 포스팅에서는 그 차이를 직관적으로 설명하고, 실제로 어떤 상황에서 무엇을 써야 하는지도 함께 정리해본다.
+
+---
+
+## ✅ Cold Flow
+
+- **collect 하기 전에는 아무 값도 emit 하지 않음**
+- **collect 할 때마다 처음부터 다시 시작됨**
+- 기본 `flow {}`, `flowOf()` 등은 모두 Cold Flow
+
+### 예시
+
+```kotlin
+fun coldFlow(): Flow<Int> = flow {
+    println("Flow 시작")
+    emit(1)
+    emit(2)
+}
+
+// 두 번 collect하면 "Flow 시작"이 두 번 출력됨
+coldFlow().collect { println("A: $it") }
+coldFlow().collect { println("B: $it") }
+```
+
+## ✅ Hot Flow
+- collect 하지 않아도 값을 emit 할 수 있음
+
+- 중간부터 collect 해도 최근 값이나 replay된 값을 받을 수 있음
+
+- 대표적인 예: SharedFlow, StateFlow
+
+## 🔄 SharedFlow
+- Hot & Multicast: 여러 구독자가 동시에 값을 받을 수 있음
+
+- replay, extraBufferCapacity, drop 정책 등 설정 가능
+
+- Navigation, Toast, 단발성 이벤트에 적합
+
+
+### 예시
+```kotlin
+val sharedFlow = MutableSharedFlow<Int>(replay = 1)
+
+scope.launch {
+    sharedFlow.collect { println("수신자 A: $it") }
+}
+
+sharedFlow.emit(100) // 수신자 A가 받음
+
+```
+
+## 🟢 StateFlow
+- Hot & 상태 보관용
+
+- 항상 최신 값을 보관하고, collect 시 최신 값부터 수신
+
+- UI 상태 관리에 매우 적합
+
+### 예시
+```kotlin
+val state = MutableStateFlow(0)
+
+state.value = 10
+state.collect { println("UI 상태: $it") } // 10부터 출력
+
+```
+
+## 🔁 stateIn
+- Cold Flow를 Hot한 StateFlow로 변환
+
+- viewModelScope 등의 CoroutineScope 안에서 사용해야 함
+
+- Flow를 UI에 바인딩할 때 자주 사용
+
+``` kotlin
+val coldFlow = flow {
+    emit(1)
+    delay(1000)
+    emit(2)
+}
+
+val hotStateFlow = coldFlow.stateIn(
+    scope = viewModelScope,
+    started = SharingStarted.WhileSubscribed(),
+    initialValue = 0
+)
+
+```
+
+## ⚡ collectLatest
+이전 collect 블록을 취소하고 새 값만 처리
+
+빠르게 연속 emit 되는 값 중, 마지막 값만 처리하고 싶을 때 사용
+
+### 예시
+```kotlin
+flowOf(1, 2, 3).collectLatest { value ->
+    delay(100) // 오래 걸리는 작업
+    println("수신: $value")
+}
+
+// 출력: 수신: 3 (1, 2는 취소됨)
+
+```
+
+## ⏱ debounce
+일정 시간 동안 값이 변경되지 않았을 때만 emit
+
+검색어 입력창 등에서 자주 사용됨
+
+### 예시
+``` kotlin
+searchInput
+    .debounce(300)
+    .collectLatest { query -> search(query) }
+```
+
+## 📌 언제 뭘 써야 할까?
+
+| 상황 | 추천 도구 |
+|------|-----------|
+| UI 상태를 화면에 유지하고 최신값을 보이게 하고 싶을 때 | `StateFlow`, `stateIn` |
+| Toast, Navigation 등 일회성 이벤트를 전달할 때 | `SharedFlow` |
+| 사용자의 입력이 자주 발생하는 경우 (예: 검색창 입력) | `debounce`, `collectLatest` |
+| 여러 View나 컴포넌트에서 하나의 Flow를 공유해서 쓰고 싶을 때 | `stateIn`, `shareIn` |
+| 이전 작업은 취소하고 가장 마지막 emit만 처리하고 싶을 때 | `collectLatest` |
+
+---
+
+## ✅ 정리 요약
+
+- `Cold Flow`는 `collect`할 때마다 처음부터 다시 실행되는 일회성 스트림
+- `Hot Flow`는 구독 여부와 상관없이 **계속 흐름이 유지되는 스트림**
+- `StateFlow`는 **상태 보관용**, `SharedFlow`는 **이벤트 전달용**
+- `stateIn`, `shareIn`을 활용하면 `Cold Flow`도 상태처럼 공유 가능
+- 실시간 입력 처리나 UI 반응형 처리에는 `collectLatest`, `debounce`를 적극 활용
+
