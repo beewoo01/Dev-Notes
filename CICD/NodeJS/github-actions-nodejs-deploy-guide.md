@@ -170,7 +170,6 @@ curl http://localhost:3000
 자동 배포를 위해 GitHub과 원격 서버(Ubuntu)를 연결하려면 인증 정보와 환경 정보 설정이 필요하다.
 이 과정에서 사용되는 것이 바로 **Deploy Key**, **Secrets** 다.
 
----
 
 ### 1️⃣ Deploy Key (배포용 공개키)
 
